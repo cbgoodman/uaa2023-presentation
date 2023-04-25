@@ -1,0 +1,30 @@
+<!--Hat-tip: https://www.garrickadenbuie.com/blog/xaringan-tip-logo-all-slides/-->
+<style>
+    .logo {
+      background-image: url(assets/niu.png);
+      background-size: contain;
+      background-repeat: no-repeat;
+      position: absolute;
+      top: 1em;
+      right: 1em;
+      width: 45px;
+      height: 114px;
+      z-index: 0;
+    }
+    </style>
+    
+    <script>
+    document
+      .querySelectorAll(
+        '.remark-slide-content' +
+        ':not(.title-slide)' +
+        ':not(.title-slide-final)' +
+        ':not(.segue)' +
+        // add additional classes to exclude here, e.g.
+        ':not(.inverse)' +
+        ':not(.hide-logo)'
+      )
+      .forEach(el => {
+        el.innerHTML += '<div class="logo"></div>';
+      });
+    </script>

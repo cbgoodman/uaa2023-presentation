@@ -1,0 +1,399 @@
+---
+title: "Overlapping Jurisdictions & Residential Segregation by Race"
+author: Christopher B. Goodman, PhD </br> `r icons::icon_style(icons::fontawesome("twitter"), fill="#333333")` @cbgoodman
+institute:  <br/>School of Public & Global Affairs
+date: ""
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: [default, "assets/niu.css", "assets/niu-fonts.css"]
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+      after_body: [assets/insert-logo.html]
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+    navigation:
+        scroll: false # disable slide transitions by scrolling   
+    chakra: libs/remark-latest.min.js   
+---
+```{r setup, include = FALSE}
+# load packages
+library(knitr)
+library(tidyverse)
+library(kableExtra)
+library(icons)
+library(xaringan)
+library(sf)
+library(urbnmapr)
+```
+
+class: middle, center
+
+.font150[Do overlapping local governments further segregate metropolitan areas?]
+
+---
+
+## Reasons for segregation 
+
+.font120[
+1. Individual preferences
+2. Income sorting
+3. Local government policy
+]
+
+---
+
+## Local government policy → segregation
+
+- Following Trounstine (2018, 2020), residents use restrictive land use regulations to limit housing production
+- They do so to,
+  - Maximize house prices
+  - Minimize tax burdens
+  - Ensure high quality public services
+- This has the effect of reinforcing segregation
+
+---
+
+## Overlapping governments
+
+- Commonly, special districts 
+  - Administratively and fiscally independent from other local governments
+  - Typically provide a single service (*specialization*)
+  - Can choose their boundaries (*territorial flexibility*)
+- Measured as the ratio of special districts to non-overlapping general-purpose local governments
+
+---
+
+## How do overlapping governments help segregate metropolitan areas?
+
+- In light of "imperfectly restrictive" land use regulations, special districts can achieve much of what municipalities can
+  - Specialized service provision can provide high quality public services
+  - Such public services capitalized positively into house prices
+  - By limiting service provision to within (homogenous) district, between parcel subsidies are minimized, keeping tax burden low
+- Overlapping governments can mimic restrictive land use regulations
+- Conditioned on residents having the knowledge to create special districts
+  - Patterns of political involvement (white, male, homeowners) suggest the knowledge exists
+
+---
+
+## Sample construction 
+
+- Period: Census years, 1980 - 2010
+- Units: SMSAs (1983 definition)
+  - 309 PMSAs & NECTAs
+  - To ensure outward growth of MSA does not influence results
+- Data: Census of Population & Housing; Census of Governments
+
+---
+class: top, center
+
+```{r, fig.asp = 9/16, fig.align = 'center', out.width = "100%", dpi= 300, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+counties_sf <- get_urbn_map("counties", sf = TRUE)
+# convert to contiguous US
+counties_sf_conus <- counties_sf %>%
+  filter(state_name != "Alaska" & state_name != "Hawaii") %>%
+  arrange(county_fips)
+
+# import msa crosswalk
+msa80 <- read_csv("~/Dropbox/Data/Census/delineation-files/83msa.csv", col_types = list(col_character(), col_character()))
+
+msa_sf_conus <- counties_sf_conus %>%
+  left_join(., msa80, by = "county_fips") %>%
+  st_make_valid() %>%
+  group_by(msa_code) %>%
+  summarise(across(geometry, ~ st_union(.)), .groups = "keep") %>%
+  ungroup() %>%
+  filter(is.na(msa_code) == FALSE)
+outside_border <- counties_sf_conus %>% st_union()
+
+ggplot() +
+geom_sf(
+  data = msa_sf_conus,
+  mapping = aes(),
+  fill = "#999999",
+  color = "#333333",
+  size = 0.1) +
+geom_sf(
+  data = outside_border,
+  mapping = aes(),
+  fill = NA,
+  color = "#333333",
+  size = 0.1) +
+coord_sf(crs = 5070, datum = NA) +
+# Theming
+theme_minimal(base_family = "Public Sans") +
+theme(
+  legend.position = "none",
+  axis.line = element_blank(),
+  axis.text.x = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank(),
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+  )
+```
+
+
+---
+
+## Measuring segregation
+
+Theil (1972) index based on entropy,
+$$E = \sum_{r=1}^R (\pi_r)\text{ln} \frac{1}{\pi_r}$$
+Where $\pi_r$ is the proportion of racial group $r$
+
+Segregation is measured as the deviation of $E$ from a larger geographic aggregation of $E$, weighted by population.
+$$\begin{split}
+H_{c{\_}t} & = \sum_{t=1}^T \frac{P_t}{P_c} \left( \frac{E_c - E_t}{E_c} \right) \\
+H_{m{\_}c} & = \sum_{c=1}^C \frac{P_c}{P_m} \left( \frac{E_m - E_c}{E_m} \right)
+\end{split}$$
+
+
+---
+
+## Measuring segregation
+
+As explained by Trounstine (2018), Theil's $H$ index, calculated as the deviation of neighborhood diversity from metropolitan diversity, can be decomposed into the deviation between cities $(H_{m{\_}c})$ and a weighted average of within-city deviations. 
+
+$$H_{m{\_}t} = \sum_{t=1}^T \frac{P_t}{P_m} \left( \frac{E_m - E_t}{E_m} \right) = H_{m{\_}c} +\sum_{c=1}^C \left( \frac{P_c}{P_m} \right) \left( \frac{E_c}{E_m} \right) H_{c{\_}t}$$
+
+Overall $(H_{m{\_}t})$ and between-city $(H_{m{\_}c})$ segregation form the two dependent variables for this analysis.
+
+---
+
+## Identification strategy
+<br />
+
+$$\begin{split}
+SEG_{it} & = \beta_{ij} + \beta_2 DEMO_{it} + \beta_3 RHET_{it} + \beta_4 DENSITY_{it} + \beta_5 GROW_{it} \\ 
+& + \beta_6 \widehat{OVERLAP}_{it} + \phi_i + \tau_t + \varepsilon_{it} 
+\end{split}$$
+
+- $DEMO_{it}$ = Black-white demographic characteristics
+- $RHET_{it}$ = Measures of racial heterogeneity
+- $DENSITY_{it}$ = SMSA population density
+- $GROW_{it}$ = Annualized population growth 
+- $\widehat{OVERLAP}_{it}$ = Predicted jurisdictional overlap
+- $\phi$ = state FE, $\tau$ = common time effect, $\varepsilon$ = typical error term
+
+---
+
+## Instruments
+
+Concern that segregation leads to more overlapping governments.
+
+Exploit exogenous variation in local geography to instrument for overlapping governments 
+1. Mean slope (degree from horizontal)
+2. Miles of river segments (of segments at least 3.5 miles)
+
+<br />
+
+$$\begin{split}
+OVERLAP_{it} & =  \beta_{ij} + \beta_2 DEMO_{it} + \beta_3 RHET_{it} + \beta_4 DENSITY_{it} + \beta_5 GROW_{it} \\
+& + \beta_6  SLOPE_i + \beta_7  RIVERS_i + \phi_i + \tau_t + \varepsilon_{it}
+\end{split}$$
+
+---
+
+## Descriptive statistics
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+data.frame(
+  Variable = c(
+    "Metrowide segregation",
+    "Between city segregation",
+    "Jurisdictional overlap",
+    "Average slope",
+    "Number of river miles"
+    ),
+  Mean = c(0.249, 0.103, 2.372, 3.819, 403.119),
+  `St Dev` = c(0.149, 0.092, 3.103, 3.773, 332.103),
+  Min = c(0.011, 0.000, 0.000, 0.036, 8.354),
+  Max = c(0.766, 0.746, 25.600, 21.332, 2160.268)
+) %>%
+knitr::kable(
+  format = "html",
+  escape = FALSE,
+  table.attr = "style='width:85%;'",
+  col.names = c("Variable", "Mean", "St. Dev", "Min.", "Max.")
+  ) %>%
+pack_rows(
+  index = c(
+    "Segregation measures" = 2,
+    "Overlapping governments" = 1,
+    "Instruments" = 2
+    ),
+  bold = FALSE,
+  italic = TRUE
+) %>%
+kable_styling(
+  font_size = 18
+  )
+```
+
+---
+
+## Descriptive statistics
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+data.frame(
+  Variable = c(
+    "Racial Herfendahl index",
+    "BW difference, % <15",
+    "BW difference, % >60",
+    "BW difference, % in poverty",
+    "% <15",
+    "% >60",
+    "% in Poverty",
+    "Population growth rate",
+    "Population density"
+    ),
+  Mean = c(0.328, 0.082, 0.088, 0.194, 0.210, 0.179, 0.121, 0.011, 437.473),
+  `St Dev` = c(0.165, 0.036, 0.047, 0.074, 0.029, 0.046, 0.042, 0.013, 850.102),
+  Min = c(0.022, 0.000, 0.000, 0.003, 0.066, 0.048, 0.040, -0.131, 11.462),
+  Max = c(0.723, 0.298, 0.394, 0.803, 0.341, 0.426, 0.397, 0.069, 13776.385)
+) %>%
+knitr::kable(
+  format = "html",
+  escape = FALSE,
+  table.attr = "style='width:85%;'",
+  col.names = c("Variable", "Mean", "St. Dev", "Min.", "Max.")
+  ) %>%
+pack_rows(
+  index = c(
+    "Racial heterogeneity measures" = 4,
+    "BW demographic characteristics" = 3,
+    "Other MSA controls" = 2
+    ),
+  bold = FALSE,
+  italic = TRUE
+) %>%
+kable_styling(
+  font_size = 18
+  )
+```
+
+
+
+---
+
+## Findings
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+data.frame(
+  " " = c(
+    "Jurisdictional overlap",
+    "",
+    "F-stat. for instrument significance",
+    "N",
+    "T"
+    ),
+  "Metrowide segregation" = c("0.357**", 0.109, "13.840**", "Yes", "Yes"),
+  "Between city segregation" = c("0.308", 0.162,  "13.840**", "Yes", "Yes")
+) %>%
+knitr::kable(
+  format = "html",
+  escape = FALSE,
+  table.attr = "style='width:85%;'",
+  col.names = c("", "Metrowide segregation", "Between city segregation"),
+  align = "lcc"
+  ) %>%
+pack_rows(
+  index = c(
+    "Overlapping governments" = 2,
+    "Model summary" = 3
+    ),
+  bold = FALSE,
+  italic = TRUE
+) %>%
+footnote(general = "Excluded instruments: average slope and number of river miles. Significance levels: ** p<0.01, * p<0.05. All coefficients reported as elasticites at the mean.", footnote_as_chunk = TRUE) %>%
+kable_styling(
+  font_size = 18
+  )
+```
+
+---
+
+## Controls
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+data.frame(
+  " " = c(
+    "Racial Herfendahl index",
+    "BW difference, %<15",
+    "BW difference, %>60",
+    "BW difference, % in Poverty",
+    "%<15",
+    "%>60",
+    "% in Poverty",
+    "Population growth rate",
+    "Population density",
+    "State FE",
+    "F-stat. for instrument significance",
+    "N",
+    "T"
+    ),
+  model1 = c("0.763**", "0.092*", "-0.174**", "0.218**", "0.013", "0.619**", "-0.281**", "-0.040","0.032**", "Yes", "13.840**", "Yes", "Yes"),
+  model1se = c(0.057, 0.045, 0.049, 0.049, 0.178, 0.132, 0.060,  0.021, 0.010, " ", " ", " ", " "),
+  model2 = c("0.760**", "0.071", "-0.209**", "0.157*", "0.500", "0.906**", "-0.450**", "-0.051", "0.037*", "Yes", "13.840**", "Yes", "Yes"),
+  model2se = c(0.084, 0.067, 0.073, 0.073, 0.265, 0.197, 0.089, 0.032, 0.015, " ", " ", " ", " ")
+) %>%
+knitr::kable(
+  format = "html",
+  escape = FALSE,
+  table.attr = "style='width:85%;'",
+  col.names = c("", "Elasticity", "S.E.", "Elasticity", "S.E."),
+  align = "lcccc"
+  ) %>%
+add_header_above(header = c(" " = 1, "Metrowide segregation" = 2, "Between city segregation" = 2)) %>%
+pack_rows(
+  index = c(
+    "Racial heterogeneity measures" = 4,
+    "BW demographic characteristics" = 3,
+    "Other MSA controls" = 3,
+    "Model summary" = 3
+    ),
+  bold = FALSE,
+  italic = TRUE
+) %>%
+kable_styling(
+  font_size = 14
+  )
+```
+
+
+---
+
+## Discussion
+
+- Using the all-county sample (most similar to Berry 2008), overlap increases own-source revenue and/or property tax revenue per capita
+  - Even after controlling for potentially binding TELs
+- Using the border-county sample, these results disappear
+  - Better control group
+  - Sign on interaction is indicative of circumvention (though statistically significant)
+  
+
+---
+class: title-slide-final, middle
+background-image: url(assets/NIUtag_xhorz_white.png)
+background-size: 350px
+background-position: 5% 5%
+
+## Thanks!
+
+|                                                                           |                       |
+| :------------------------------------------------------------------------ | :-------------------- |
+| <a href="mailto:cgoodman@niu.edu">`r icons::icon_style(icons::fontawesome("paper-plane", style = "solid"), fill="white")`    | cgoodman@niu.edu      |
+| <a href="https://www.cgoodman.com"> `r icons::icon_style(icons::fontawesome("link", style = "solid"), fill="white")`   | cgoodman.com          |
+| <a href="https://twitter.com/cbgoodman">`r icons::icon_style(icons::fontawesome("twitter"), fill="white")`   | @cbgoodman            |
+| <a href="https://github.com/cbgoodman"> `r icons::icon_style(icons::fontawesome("github"), fill="white")`    | cbgoodman             |
+
+
+```{r, eval = FALSE, echo = FALSE}
+xaringan::decktape("goodman-uaa-2023.html", "goodman-uaa-2023.pdf", docker = FALSE)
+```
