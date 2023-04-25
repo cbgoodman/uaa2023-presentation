@@ -86,11 +86,12 @@ class: middle, center
   - 309 PMSAs & NECTAs
   - To ensure outward growth of MSA does not influence results
 - Data: Census of Population & Housing; Census of Governments
+  - Tract level data normalized to 2010 definitions using the Longitudinal Tract Database
 
 ---
 class: top, center
 
-```{r, fig.asp = 9/16, fig.align = 'center', out.width = "100%", dpi= 300, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+```{r, label='msa-map', eval=TRUE, echo=FALSE, fig.align='center', fig.asp=9/16, message=FALSE, warning=FALSE, dpi=300, out.width="100%"}
 counties_sf <- get_urbn_map("counties", sf = TRUE)
 # convert to contiguous US
 counties_sf_conus <- counties_sf %>%
@@ -190,6 +191,7 @@ Concern that segregation leads to more overlapping governments.
 Exploit exogenous variation in local geography to instrument for overlapping governments 
 1. Mean slope (degree from horizontal)
 2. Miles of river segments (of segments at least 3.5 miles)
+Both sourced from the USGS
 
 <br />
 
@@ -202,7 +204,7 @@ OVERLAP_{it} & =  \beta_{ij} + \beta_2 DEMO_{it} + \beta_3 RHET_{it} + \beta_4 D
 
 ## Descriptive statistics
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+```{r, label="descriptive-1", echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
 data.frame(
   Variable = c(
     "Metrowide segregation",
@@ -232,7 +234,7 @@ pack_rows(
   italic = TRUE
 ) %>%
 kable_styling(
-  font_size = 18
+  font_size = 20
   )
 ```
 
@@ -240,16 +242,16 @@ kable_styling(
 
 ## Descriptive statistics
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+```{r, label="descriptive-2", echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
 data.frame(
   Variable = c(
     "Racial Herfendahl index",
-    "BW difference, % <15",
-    "BW difference, % >60",
-    "BW difference, % in poverty",
-    "% <15",
-    "% >60",
-    "% in Poverty",
+    "BW difference, percent younger than 15",
+    "BW difference, percent older than 60",
+    "BW difference, percent in poverty",
+    "Percent younger than 15",
+    "Percent older than 60",
+    "Percent in poverty",
     "Population growth rate",
     "Population density"
     ),
@@ -274,7 +276,7 @@ pack_rows(
   italic = TRUE
 ) %>%
 kable_styling(
-  font_size = 18
+  font_size = 20
   )
 ```
 
@@ -284,7 +286,7 @@ kable_styling(
 
 ## Findings
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+```{r, label="main-findings", echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
 data.frame(
   " " = c(
     "Jurisdictional overlap",
@@ -293,8 +295,8 @@ data.frame(
     "N",
     "T"
     ),
-  "Metrowide segregation" = c("0.357**", 0.109, "13.840**", "Yes", "Yes"),
-  "Between city segregation" = c("0.308", 0.162,  "13.840**", "Yes", "Yes")
+  "Metrowide segregation" = c("0.357**", 0.109, "13.840**", 309, 4),
+  "Between city segregation" = c("0.308", 0.162,  "13.840**", 309, 4)
 ) %>%
 knitr::kable(
   format = "html",
@@ -321,16 +323,16 @@ kable_styling(
 
 ## Controls
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
+```{r, label="control-findings", echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
 data.frame(
   " " = c(
     "Racial Herfendahl index",
-    "BW difference, %<15",
-    "BW difference, %>60",
-    "BW difference, % in Poverty",
-    "%<15",
-    "%>60",
-    "% in Poverty",
+    "BW difference, percent younger than 15",
+    "BW difference, percent older than 60",
+    "BW difference, percent in poverty",
+    "Percent younger than 15",
+    "Percent older than 60",
+    "Percent in poverty",
     "Population growth rate",
     "Population density",
     "State FE",
@@ -338,9 +340,9 @@ data.frame(
     "N",
     "T"
     ),
-  model1 = c("0.763**", "0.092*", "-0.174**", "0.218**", "0.013", "0.619**", "-0.281**", "-0.040","0.032**", "Yes", "13.840**", "Yes", "Yes"),
+  model1 = c("0.763**", "0.092*", "-0.174**", "0.218**", "0.013", "0.619**", "-0.281**", "-0.040","0.032**", "Yes", "13.840**", 309, 4),
   model1se = c(0.057, 0.045, 0.049, 0.049, 0.178, 0.132, 0.060,  0.021, 0.010, " ", " ", " ", " "),
-  model2 = c("0.760**", "0.071", "-0.209**", "0.157*", "0.500", "0.906**", "-0.450**", "-0.051", "0.037*", "Yes", "13.840**", "Yes", "Yes"),
+  model2 = c("0.760**", "0.071", "-0.209**", "0.157*", "0.500", "0.906**", "-0.450**", "-0.051", "0.037*", "Yes", "13.840**", 309, 4),
   model2se = c(0.084, 0.067, 0.073, 0.073, 0.265, 0.197, 0.089, 0.032, 0.015, " ", " ", " ", " ")
 ) %>%
 knitr::kable(
@@ -371,12 +373,10 @@ kable_styling(
 
 ## Discussion
 
-- Using the all-county sample (most similar to Berry 2008), overlap increases own-source revenue and/or property tax revenue per capita
-  - Even after controlling for potentially binding TELs
-- Using the border-county sample, these results disappear
-  - Better control group
-  - Sign on interaction is indicative of circumvention (though statistically significant)
-  
+- Increasing numbers of overlapping local governments leads to an increase in Black-white racial segregation 
+  - A ten percent increase in overlap → 3.6 percent increase in metropolitan-wide segregation 
+  - The results appear driven by within-city changes in segregation (between city measures show no association)
+- While municipalities undoubtedly drive some portion of racial segregation through restrictive land use regulations, overlapping governments can accomplish similar results 
 
 ---
 class: title-slide-final, middle
@@ -394,6 +394,6 @@ background-position: 5% 5%
 | <a href="https://github.com/cbgoodman"> `r icons::icon_style(icons::fontawesome("github"), fill="white")`    | cbgoodman             |
 
 
-```{r, eval = FALSE, echo = FALSE}
+```{r, eval = TRUE, echo = FALSE}
 xaringan::decktape("goodman-uaa-2023.html", "goodman-uaa-2023.pdf", docker = FALSE)
 ```
